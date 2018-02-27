@@ -1,7 +1,9 @@
 from django.shortcuts import render,HttpResponse
 from django.http import JsonResponse
 from rest_framework import views
+from rest_framework.response import Response
 from api import models
+from api import series
 import uuid
 
 class LoginView(views.APIView):
@@ -60,6 +62,28 @@ class CoursesView(views.APIView):
 
 
 
+class DegreeCourse(views.APIView):
+    def get(self, request, *args, **kwargs):
+        pk = kwargs.get('pk')  # 课程ID
+        if pk:
+            # todo:根据ID得到对应的课程
+            dc = models.DegreeCourse.objects.get(pk=pk)
+            print(dc,'-------------')
+            ser = series.DegreeCourseSerializer(instance=dc)
+            ret = ser.data
+            # ret = {
+            #     'title': "学位课标题",
+            #     'summary': '这是学位课'+pk
+            # }
+        else:
+            dcs = models.DegreeCourse.objects.all()
+            ser = series.DegreeCourseSerializer(instance=dcs, many=True)
+            ret = {
+                'code': 1000,
+                'courseList': ser.data
+            }
+        response = Response(ret)
+        return response
 
 
 
