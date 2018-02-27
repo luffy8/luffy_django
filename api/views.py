@@ -1,6 +1,8 @@
 from django.shortcuts import render,HttpResponse
 from django.http import JsonResponse
 from rest_framework import views
+from api import models
+import uuid
 
 class LoginView(views.APIView):
     def get(self, request, *args, **kwargs):
@@ -10,12 +12,22 @@ class LoginView(views.APIView):
     def post(self, request, *args, **kwargs):
         # 接收到的用户名和密码
         username, pwd = request.data.get('username'), request.data.get('password')
-        # 返回token
-        ret = {
-            'code': 1000,
-            'username': username,
-            'token': '71ksdf7913knaksdasd7',
-        }
+
+        # 验证账号，通过的话生成token并保存
+        print(username, pwd)
+        user_obj = models.Account.objects.filter(username=username,password=pwd).first()
+        if user_obj:
+            token = uuid.uuid1()
+            ret = {
+                'code': 1000,
+                'username': username,
+                'token': token,
+            }
+        else:
+            ret = {
+                'code': 403,
+                'msg':'用户名或密码错误'
+            }
         response = JsonResponse(ret)
         return response
 
