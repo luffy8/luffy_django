@@ -127,3 +127,11 @@ class CourseDetailSerializers(serializers.Serializer):
     offten_asked_question = MyOfftenQuestionField(source="course")
     CourseChapter = MyChapterSectionField(source="course.coursechapters.all")
 
+
+# 关于文章的序列化
+class NewsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Article
+        fields = '__all__'
+        depth = 2
+

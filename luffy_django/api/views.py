@@ -75,3 +75,17 @@ class CoursesView(views.APIView):
             ret = series.CourseSerializers(instance=course_list, many=True)
         response = Response(ret.data)
         return response
+
+
+class NewsViews(views.APIView):
+    def get(self, request, *args, **kwargs):
+        pk = kwargs.get('pk')
+        if pk:
+            art_obj = models.Article.objects.filter(pk=pk).first()
+            ser = series.NewsSerializer(instance=art_obj, context={'request': request})
+            response = Response(ser.data)
+        else:
+            news_list = models.Article.objects.all()
+            ser = series.NewsSerializer(instance=news_list, many=True, context={'request':request})
+            response = Response(ser.data)
+        return response

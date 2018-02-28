@@ -23,4 +23,6 @@ urlpatterns = [
     url(r'^courses/(?P<pk>\d+)/$', views.CoursesView.as_view()),
     url(r'^micro/$', views.DegreeCourse.as_view()),
     url(r'^micro/(?P<pk>\d+)\.(?P<format>[a-z0-9]+)$', views.DegreeCourse.as_view()),
+    url(r'^news/$', views.NewsViews.as_view()),
+    url(r'^news/(?P<pk>\d+)\.(?P<format>[a-z0-9]+)$', views.NewsViews.as_view()),
 ]
