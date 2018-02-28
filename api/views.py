@@ -1,8 +1,15 @@
-from django.shortcuts import render,HttpResponse
+from django.shortcuts import HttpResponse
 from django.http import JsonResponse
-from rest_framework import views
-from api import models
+
 import uuid
+
+from rest_framework import views
+
+from rest_framework.response import Response
+
+from api import models
+from api import series
+
 
 class LoginView(views.APIView):
     def get(self, request, *args, **kwargs):
@@ -41,28 +48,14 @@ class CoursesView(views.APIView):
         pk = kwargs.get('pk')  # 课程ID
         if pk:
             # todo:根据ID得到对应的课程
-            ret = {
-                'title': "课程标题",
-                'summary': '这是课程'+pk
-            }
+            course_obj = models.CourseDetail.objects.filter(course_id=pk).first()
+            ret = series.CourseDetailSerializers(instance=course_obj)
         else:
             # todo:返回所有的课程
-            ret = {
-                'code': 1000,
-                'courseList': [
-                     {"name": '课程1', 'id': 1},
-                     {"name": '课程2', 'id': 2},
-                     {"name": '课程3', 'id': 3},
-                ]
-            }
-        response = JsonResponse(ret)
+            course_list = models.Course.objects.all()
+            ret = series.CourseSerializers(instance=course_list, many=True)
+        response = Response(ret.data)
         return response
-
-
-
-
-
-
 
 
 
