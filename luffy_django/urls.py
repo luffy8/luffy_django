@@ -20,7 +20,7 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^login/', views.LoginView.as_view()),
     url(r'^courses/$', views.CoursesView.as_view()),
-    url(r'^courses/(?P<pk>\d+)\.(?P<format>[a-z0-9]+)$', views.CoursesView.as_view()),
+    url(r'^courses/(?P<pk>\d+)/$', views.CoursesView.as_view()),
     url(r'^micro/$', views.DegreeCourse.as_view()),
     url(r'^micro/(?P<pk>\d+)\.(?P<format>[a-z0-9]+)$', views.DegreeCourse.as_view()),
 ]

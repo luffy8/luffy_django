@@ -208,11 +208,14 @@ class OftenAskedQuestion(models.Model):
 
 
 class CourseOutline(models.Model):
-    """课程大纲"""
+    """课程大纲
+        一个课程对应多条大纲记录
+    """
+
     course_detail = models.ForeignKey("CourseDetail")
-    title = models.CharField(max_length=128)
+    title = models.CharField(max_length=128, verbose_name='大纲标题')
     # 前端显示顺序
-    order = models.PositiveSmallIntegerField(default=1)
+    order = models.PositiveSmallIntegerField(default=1, verbose_name="大纲顺序")
 
     content = models.TextField("内容", max_length=2048)
 
