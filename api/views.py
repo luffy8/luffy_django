@@ -38,28 +38,6 @@ class LoginView(views.APIView):
         return response
 
 
-class CoursesView(views.APIView):
-    def get(self, request, *args, **kwargs):
-        pk = kwargs.get('pk')  # 课程ID
-        if pk:
-            # todo:根据ID得到对应的课程
-            ret = {
-                'title': "课程标题",
-                'summary': '这是课程'+pk
-            }
-        else:
-            # todo:返回所有的课程
-            ret = {
-                'code': 1000,
-                'courseList': [
-                     {"name": '课程1', 'id': 1},
-                     {"name": '课程2', 'id': 2},
-                     {"name": '课程3', 'id': 3},
-                ]
-            }
-        response = JsonResponse(ret)
-        return response
-
 
 
 class DegreeCourse(views.APIView):
@@ -68,13 +46,8 @@ class DegreeCourse(views.APIView):
         if pk:
             # todo:根据ID得到对应的课程
             dc = models.DegreeCourse.objects.get(pk=pk)
-            print(dc,'-------------')
             ser = series.DegreeCourseSerializer(instance=dc)
             ret = ser.data
-            # ret = {
-            #     'title': "学位课标题",
-            #     'summary': '这是学位课'+pk
-            # }
         else:
             dcs = models.DegreeCourse.objects.all()
             ser = series.DegreeCourseSerializer(instance=dcs, many=True)
