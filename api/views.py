@@ -2,39 +2,47 @@ from django.shortcuts import HttpResponse
 from django.http import JsonResponse
 
 import uuid
+import datetime
 
 from rest_framework import views
 from rest_framework.response import Response
 from api import models
 from api import series
 
+from rest_framework.versioning import URLPathVersioning
+
+def test(request):
+    return HttpResponse(111)
 
 class LoginView(views.APIView):
+    authentication_classes = []
+    permission_classes = []
+
+
     def get(self, request, *args, **kwargs):
         response = HttpResponse()
         return response
 
     def post(self, request, *args, **kwargs):
-        # 接收到的用户名和密码
-        username, pwd = request.data.get('username'), request.data.get('password')
 
-        # 验证账号，通过的话生成token并保存
-        print(username, pwd)
-        user_obj = models.Account.objects.filter(username=username,password=pwd).first()
-        if user_obj:
-            token = uuid.uuid1()
-            ret = {
-                'code': 1000,
-                'username': username,
-                'token': token,
-            }
+        response = {'code': 1000, 'errors': None}
+        ser = series.AuthSerializer(data=request.data)
+        if ser.is_valid():
+            try:
+                user = models.Account.objects.get(**ser.validated_data)
+                token_obj, is_create = models.UserAuthToken.objects.get_or_create(user=user)
+                token_obj.token = str(datetime.datetime.utcnow())+'_'+user.username
+                token_obj.save()
+                response['token'] = token_obj.token
+                response['username'] = user.username
+                response['code'] = 1002
+            except Exception as e:
+                response['errors'] = '用户名密码验证异常'
+                response['code'] = 1001
         else:
-            ret = {
-                'code': 403,
-                'msg':'用户名或密码错误'
-            }
-        response = JsonResponse(ret)
-        return response
+            response['errors'] = ser.errors
+
+        return Response(response)
 
     def options(self, request, *args, **kwargs):
         response = HttpResponse()
