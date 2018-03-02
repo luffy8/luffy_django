@@ -143,3 +143,4 @@ CACHES = {
 }
 
 REDIS_SHOPPING_CAR_KEY = "cart11"
+REDIS_SETTLEMENT_KEY = "settlement11"
