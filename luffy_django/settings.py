@@ -134,10 +134,12 @@ STATIC_URL = '/static/'
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://172.96.203.6:6379",
+        "LOCATION": "redis://192.168.20.74:6379",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "PASSWORD": "passredis",
+            # "PASSWORD": "passredis",
         }
     }
 }
+
+REDIS_SHOPPING_CAR_KEY = "cart11"
