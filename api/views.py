@@ -1,8 +1,10 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import HttpResponse
 from django.http import JsonResponse
 
 import uuid
 import datetime
+import json
 
 from rest_framework import views
 from rest_framework.response import Response
@@ -10,6 +12,13 @@ from api import models
 from api import series
 
 from rest_framework.versioning import URLPathVersioning
+
+
+from utils.auth.token_auth import LuffyTokenAuthentication
+from utils.exception import PricePolicyDoesNotExist
+from django.conf import settings
+
+from utils.redis_pool import conn as CONN
 
 def test(request):
     return HttpResponse(111)
@@ -97,3 +106,102 @@ class NewsViews(views.APIView):
             ser = series.NewsSerializer(instance=news_list, many=True, context={'request':request})
             response = Response(ser.data)
         return response
+
+
+
+class Cart(views.APIView):
+    # authentication_classes = [LuffyTokenAuthentication,]
+    def post(self, request, *args, **kwargs):
+        """
+        添加购物车
+        """
+        response = {'code': 1000, 'msg': None}
+        try:
+            course_id = int(request.data.get('course_id'))
+            policy_id = int(request.data.get('policy_id'))
+
+            # 1. 获取课程
+            course_obj = models.Course.objects.get(id=course_id)
+
+            # 2. 获取当前课程的所有价格策略: id, 有效期，价格
+            price_policy_list = []
+            flag = False
+            price_policy_objs = course_obj.price_policy.all()
+            for item in price_policy_objs:
+                if item.id == policy_id:
+                    flag = True
+                price_policy_list.append(
+                    {'id': item.id, 'valid_period': item.get_valid_period_display(), 'price': item.price})
+            if not flag:
+                raise PricePolicyDoesNotExist()
+
+            # 3. 课程和价格策略均没有问题，将课程和价格策略放到redis中
+            # 课程id,课程图片地址,课程标题，所有价格策略，默认价格策略
+            course_dict = {
+                'id': course_obj.id,
+                'img': course_obj.course_img,
+                'title': course_obj.name,
+                'price_policy_list': price_policy_list,
+                'default_policy_id': policy_id
+            }
+
+            # a. 获取当前用户购物车中的课程 car = {1: {,,,}, 2:{....}}
+            # b. car[course_obj.id] = course_dict
+            # c. conn.hset('luffy_shopping_car',request.user.id,car)
+            nothing = CONN.hget(settings.REDIS_SHOPPING_CAR_KEY, request.user.id)
+            if not nothing:
+                data = {course_obj.id: course_dict}
+            else:
+                data = json.loads(nothing.decode('utf-8'))
+                data[course_obj.id] = course_dict
+
+            print(data)
+
+            CONN.hset(settings.REDIS_SHOPPING_CAR_KEY, request.user.id, json.dumps(data))
+
+        except ObjectDoesNotExist as e:
+            response['code'] = 1001
+            response['msg'] = '视频不存在'
+        except PricePolicyDoesNotExist as e:
+            response['code'] = 1002
+            response['msg'] = '价格策略不存在'
+        except Exception as e:
+            print(e)
+            response['code'] = 1003
+            response['msg'] = '添加购物车失败'
+
+        return Response(response)
+
+    def get(self, request, *args, **kwargs):
+        """
+        查看购物车
+        """
+        course = CONN.hget(settings.REDIS_SHOPPING_CAR_KEY, request.user.id)
+        course_dict = json.loads(course.decode('utf-8'))
+        return Response(course_dict)
+
+    def delete(self, request, *args, **kwargs):
+        """
+        删除购物车中的课程
+        """
+        response = {'code': 1000}
+        try:
+            course_id = request.GET.get('pk')
+            print(course_id, '------')
+            if not course_id:
+                raise Exception('请选择要删除的课程')
+            product_dict = CONN.hget(settings.REDIS_SHOPPING_CAR_KEY, request.user.id)
+
+            if not product_dict:
+                raise Exception('购物车中无课程')
+            product_dict = json.loads(product_dict.decode('utf-8'))
+            if course_id not in product_dict:
+                raise Exception('购物车中无该商品')
+
+            del product_dict[course_id]
+            CONN.hset(settings.REDIS_SHOPPING_CAR_KEY, request.user.id, json.dumps(product_dict))
+            print(CONN.hget(settings.REDIS_SHOPPING_CAR_KEY, request.user.id))
+        except Exception as e:
+            response['code'] = 1001
+            response['msg'] = str(e)
+        return Response(response)
