@@ -1,23 +1,25 @@
 from django.shortcuts import HttpResponse
-from django.http import JsonResponse
+from django.core.exceptions import ObjectDoesNotExist
 
-import uuid
 import datetime
+import json
 
 from rest_framework import views
 from rest_framework.response import Response
+
 from api import models
 from api import series
+from utils.auth.token_auth import LuffyTokenAuthentication
+from utils.redis_pool import conn
 
-from rest_framework.versioning import URLPathVersioning
 
 def test(request):
     return HttpResponse(111)
 
+
 class LoginView(views.APIView):
     authentication_classes = []
     permission_classes = []
-
 
     def get(self, request, *args, **kwargs):
         response = HttpResponse()
@@ -31,7 +33,7 @@ class LoginView(views.APIView):
             try:
                 user = models.Account.objects.get(**ser.validated_data)
                 token_obj, is_create = models.UserAuthToken.objects.get_or_create(user=user)
-                token_obj.token = str(datetime.datetime.utcnow())+'_'+user.username
+                token_obj.token = str(datetime.datetime.utcnow()) + '_' + user.username
                 token_obj.save()
                 response['token'] = token_obj.token
                 response['username'] = user.username
@@ -47,8 +49,6 @@ class LoginView(views.APIView):
     def options(self, request, *args, **kwargs):
         response = HttpResponse()
         return response
-
-
 
 
 class DegreeCourse(views.APIView):
@@ -94,6 +94,65 @@ class NewsViews(views.APIView):
             response = Response(ser.data)
         else:
             news_list = models.Article.objects.all()
-            ser = series.NewsSerializer(instance=news_list, many=True, context={'request':request})
+            ser = series.NewsSerializer(instance=news_list, many=True, context={'request': request})
             response = Response(ser.data)
         return response
+
+
+class ShoppingCartView(views.APIView):
+    authentication_classes = [LuffyTokenAuthentication, ]
+
+    def get(self, request, *args, **kwargs):
+        ret = {'code': 1000, 'data': None, 'msg': None, 'error': None}
+        try:
+            course_dict_bytes = conn.hget('luffyshopping_cart1', request.user.id)
+            course_dict = course_dict_bytes.decode('utf-8')
+            ret['code'] = 1200
+            ret['data'] = course_dict
+            return Response(ret)
+        except Exception:
+            ret['code'] = 1500
+            ret['error'] = '服务端异常啦天呐'
+            return ret
+
+    def post(self, request, *args, **kwargs):
+        course_id = request.data.get('course_id')
+        price_policy_id = request.data.get('price_policy_id')
+        ret = {'code': 1000, 'msg': None, 'error': None}
+        try:
+            course_obj = models.Course.objects.get(id=course_id)
+
+            # 如果该课程不处于上线状态
+            if course_obj.status != 0:
+                ret['code'] = 1400
+                ret['error'] = '当前课程不在上线状态'
+                return Response(ret)
+            price_policy_list = [price_policy_obj.id
+                                 for price_policy_obj in course_obj.price_policy.all()
+                                 ]
+            # 如果该课程没有改价格策略
+            if not int(price_policy_id) in price_policy_list:
+                ret['code'] = 1400
+                ret['error'] = '当前课程不存在该价格策略'
+                return Response(ret)
+
+            course_dict = {
+                'price_policy_all': price_policy_list,
+                'price_policy': price_policy_id,
+            }
+            cart = conn.hget('luffyshopping_cart1', request.user.id)   # b'{"1": {"price_policy_all": [1, 2, 3], "price_policy": 1}}'
+            if not cart:
+                data = {str(course_obj.id): course_dict}
+            else:
+                data = json.loads(cart.decode('utf-8'))
+                data[str(course_id)] = course_dict
+            conn.hset('luffyshopping_cart1', request.user.id, json.dumps(data))
+            return Response('OK')
+        except ObjectDoesNotExist:
+            ret['code'] = 1404
+            ret['error'] = '课程不存在'
+            return Response(ret)
+        except Exception:
+            ret['code'] = 1500
+            ret['error'] = '服务端异常啦'
+            return Response(ret)

@@ -134,10 +134,10 @@ STATIC_URL = '/static/'
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://47.93.4.198:6379",
+        "LOCATION": "redis://172.96.203.6:6379",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            #"PASSWORD": "asdfasdf",
+            "PASSWORD": "passredis",
         }
     }
 }
