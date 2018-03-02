@@ -141,3 +141,5 @@ CACHES = {
         }
     }
 }
+
+REDIS_SHOPPING_CAR = 'redis_shopping_car'

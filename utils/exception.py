@@ -4,3 +4,7 @@
 class PricePolicyDoesNotExist(Exception):
     """The requested object does not exist"""
     pass
+
+
+class CourseNotOnLine(Exception):
+    pass
