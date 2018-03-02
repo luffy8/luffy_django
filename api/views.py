@@ -202,3 +202,41 @@ class Cart(views.APIView):
             response['code'] = 1001
             response['msg'] = str(e)
         return Response(response)
+
+    def put(self, request, *args, **kwargs):
+        """
+        更新购物车中的课程的默认的价格策略
+        :param request:
+        :param args:
+        :param kwargs:
+        :return:
+        """
+        response = {'code': 1000}
+        try:
+            course_id = request.GET.get('pk')
+            policy_id = request.data.get('policy_id')
+            product_dict = CONN.hget(settings.REDIS_SHOPPING_CAR_KEY, request.user.id)
+            if not product_dict:
+                raise Exception('购物车清单不存在')
+            product_dict = json.loads(product_dict.decode('utf-8'))
+            if course_id not in product_dict:
+                raise Exception('购物车清单中商品不存在')
+
+            policy_exist = False
+            for policy in product_dict[course_id]['price_policy_list']:
+                if policy['id'] == policy_id:
+                    policy_exist = True
+                    break
+            if not policy_exist:
+                raise PricePolicyDoesNotExist()
+
+            product_dict[course_id]['choice_policy_id'] = policy_id
+            CONN.hset(settings.REDIS_SHOPPING_CAR_KEY, request.user.id, json.dumps(product_dict))
+        except PricePolicyDoesNotExist as e:
+            response['code'] = 1001
+            response['msg'] = '价格策略不存在'
+        except Exception as e:
+            response['code'] = 1002
+            response['msg'] = str(e)
+
+        return Response(response)
