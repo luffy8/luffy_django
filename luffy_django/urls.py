@@ -28,9 +28,5 @@ urlpatterns = [
     url(r'^news/$', views.NewsViews.as_view()),
     url(r'^news/(?P<pk>\d+)\.(?P<format>[a-z0-9]+)$', views.NewsViews.as_view()),
     url(r'^cart/$', views.Cart.as_view()),
-<<<<<<< HEAD
-]
-=======
     url(r'^settlement/$', views.Settlement.as_view()),
 ]
->>>>>>> 6caf560dd105cd9fa9e3a6cb4e0c63f3a97bba1e

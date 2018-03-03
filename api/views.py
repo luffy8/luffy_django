@@ -11,12 +11,8 @@ from rest_framework.response import Response
 from api import models
 from api import series
 from utils.auth.token_auth import LuffyTokenAuthentication
-from utils.redis_pool import conn
 
-
-
-from utils.auth.token_auth import LuffyTokenAuthentication
-from utils.exception import PricePolicyDoesNotExist
+from utils.exception import PricePolicyDoesNotExist, CourseNotOnLine
 from django.conf import settings
 
 from utils.redis_pool import conn as CONN
@@ -119,6 +115,9 @@ class Cart(views.APIView):
 
             # 1. 获取课程
             course_obj = models.Course.objects.get(id=course_id)
+            #    如果状态不为0的话，就代表课程未上线
+            if course_obj.status:
+                raise CourseNotOnLine()
 
             # 2. 获取当前课程的所有价格策略: id, 有效期，价格
             price_policy_list = []
@@ -166,6 +165,9 @@ class Cart(views.APIView):
             print(e)
             response['code'] = 1003
             response['msg'] = '添加购物车失败'
+        except Exception as e:
+            response['code'] = 1004
+            response['msg'] = '当前选择课程未上线'
 
         return Response(response)
 
@@ -412,7 +414,7 @@ class Settlement(views.APIView):
                         continue
                     global_coupon_dict[user_coupon.id] = coupon_info
             user_settlement = {
-                'course_dict_policy':course_dict_policy
+                'course_dict_policy':course_dict_policy,
                 'global_coupon_dict':global_coupon_dict
             }
             CONN.hset(settings.REDIS_SETTLEMENT_KEY,request.user.id,json.dumps(user_settlement))
