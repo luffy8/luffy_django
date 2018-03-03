@@ -107,7 +107,7 @@ class Cart(views.APIView):
     def post(self, request, *args, **kwargs):
         """
         添加购物车
-        """ 
+        """
         response = {'code': 1000, 'msg': None}
         try:
             course_id = int(request.data.get('course_id'))
@@ -161,13 +161,14 @@ class Cart(views.APIView):
         except PricePolicyDoesNotExist as e:
             response['code'] = 1002
             response['msg'] = '价格策略不存在'
+        except CourseNotOnLine as e:
+            response['code'] = 1004
+            response['msg'] = '当前选择课程未上线'
         except Exception as e:
             print(e)
             response['code'] = 1003
             response['msg'] = '添加购物车失败'
-        except Exception as e:
-            response['code'] = 1004
-            response['msg'] = '当前选择课程未上线'
+
 
         return Response(response)
 
