@@ -29,4 +29,5 @@ urlpatterns = [
     url(r'^news/(?P<pk>\d+)\.(?P<format>[a-z0-9]+)$', views.NewsViews.as_view()),
     url(r'^cart/$', views.Cart.as_view()),
     url(r'^settlement/$', views.Settlement.as_view()),
+    url(r'^payment/$', views.Payment.as_view()),
 ]

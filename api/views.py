@@ -103,7 +103,7 @@ class NewsViews(views.APIView):
         return response
 
 class Cart(views.APIView):
-    # authentication_classes = [LuffyTokenAuthentication,]
+    authentication_classes = [LuffyTokenAuthentication,]
     def post(self, request, *args, **kwargs):
         """
         添加购物车
@@ -178,6 +178,7 @@ class Cart(views.APIView):
         """
         course = CONN.hget(settings.REDIS_SHOPPING_CAR_KEY, request.user.id)
         course_dict = json.loads(course.decode('utf-8'))
+        print(course_dict,'=====',request.user.id)
         return Response(course_dict)
 
     def delete(self, request, *args, **kwargs):
@@ -248,6 +249,8 @@ class Settlement(views.APIView):
     """
     结算，认证已在全局中存在
     """
+    authentication_classes = [LuffyTokenAuthentication, ]
+
     def get(self,request,*args,**kwargs):
         """
         结算列表，和购物车列表写重复了。留着吧，反正也不耽误事儿。
@@ -258,7 +261,7 @@ class Settlement(views.APIView):
         """
         response = {'code':1000}
         try:
-            settlement_list = CONN.hget(settings.REDIS_SETTLEMENT_KEY,request.user.id)
+            settlement_list = CONN.hget(settings.REDIS_SETTLEMENT_KEY, request.user.id)
             if not settlement_list:
                 raise Exception()
             response['data'] = {
@@ -278,7 +281,7 @@ class Settlement(views.APIView):
             course_id_list = request.data.get('course_list')
             if not course_id_list:
                 raise Exception('还没选择要结算的课程')
-            course_dict = CONN.hget(settings.REDIS_SHOPPING_CAR_KEY,request.user.id)
+            course_dict = CONN.hget(settings.REDIS_SHOPPING_CAR_KEY, request.user.id)
             if not course_dict:
                 raise Exception('购物车为空')
             """
@@ -335,85 +338,48 @@ class Settlement(views.APIView):
                     'coupon_list': [],
                 }
                 course_dict_policy[course_id] = course_policy
-            user_coupon_list= models.CouponRecord.objects.filter(account=request.user,status=0)
+
+            user_coupon_list = models.CouponRecord.objects.filter(account=request.user, status=0)
             global_coupon_dict = {}
             current_date = datetime.datetime.now().date()
+            print(course_dict_policy)
             for user_coupon in user_coupon_list:
                 begin_date = user_coupon.coupon.valid_begin_date
                 end_date = user_coupon.coupon.valid_end_date
-                if begin_date:
-                    if current_date < begin_date:
+                if begin_date and current_date < begin_date:
                         continue
-                if end_date:
-                    if current_date > end_date:
+                if end_date and current_date > end_date:
                         continue
+
                 if user_coupon.coupon.content_type:
-                    #学位课或普通课程
-                    cid = user_coupon.coupon.object_id
-                    if user_coupon.coupon.coupon_type == 0:
-                        coupon_info = {
-                            'type':0,
-                            'text':'通用优惠券',
-                            'id':user_coupon.id,
-                            'begin_date':begin_date,
-                            'end_date':end_date,
-                            'money_equivalent_value':user_coupon.coupon.money_equivalent_value,
-                        }
-                    elif user_coupon.coupon.coupon_type == 1 and course_dict_policy[cid]['policy_price'] >= user_coupon.coupon.money_equivalent_value:
-                        coupon_info = {
-                            'type': 1,
-                            'text': '满减券',
-                            'id': user_coupon.id,
-                            'begin_date': begin_date,
-                            'end_date': end_date,
-                            'money_equivalent_value,': user_coupon.coupon.money_equivalent_value,
-                            'minimum_consume':user_coupon.coupon.minimum_consume
-                        }
-                    elif user_coupon.coupon.coupon_type == 2:
-                        coupon_info = {
-                            'type': 2,
-                            'text': '折扣券',
-                            'id': user_coupon.id,
-                            'begin_date': begin_date,
-                            'end_date': end_date,
-                            'off_percent': user_coupon.coupon.off_percent,
-                        }
-                    else:
-                        continue
+                    # 绑定课程的优惠券
+                    cid = str(user_coupon.coupon.object_id)
+                    coupon_info = {
+                        'coupon_type': user_coupon.coupon.coupon_type,
+                        'text': user_coupon.coupon.get_coupon_type_display(),
+                        'coupon_id': user_coupon.id,
+                        'begin_date': str(begin_date),
+                        'end_date': str(end_date),
+                        'money_equivalent_value': user_coupon.coupon.money_equivalent_value,
+                        'minimum_consume': user_coupon.coupon.minimum_consume,
+                        'off_percent': user_coupon.coupon.off_percent,
+                    }
                     course_dict_policy[cid]['coupon_list'].append(coupon_info)
                 else:
-                    #全局优惠券
-                    if user_coupon.coupon.coupon_type == 0:
-                        coupon_info = {
-                            'type':0,
-                            'text':'通用优惠券',
-                            'id':user_coupon.id,
-                            'begin_date':begin_date,
-                            'end_date':end_date,
-                            'money_equivalent_value':user_coupon.coupon.money_equivalent_value,
-                        }
-                    elif user_coupon.coupon.coupon_type == 1 :
-                        coupon_info = {
-                            'type': 1,
-                            'text': '满减券',
-                            'id': user_coupon.id,
-                            'begin_date': begin_date,
-                            'end_date': end_date,
-                            'money_equivalent_value,': user_coupon.coupon.money_equivalent_value,
-                            'minimum_consume':user_coupon.coupon.minimum_consume
-                        }
-                    elif user_coupon.coupon.coupon_type == 2:
-                        coupon_info = {
-                            'type': 2,
-                            'text': '折扣券',
-                            'id': user_coupon.id,
-                            'begin_date': begin_date,
-                            'end_date': end_date,
-                            'off_percent': user_coupon.coupon.off_percent,
-                        }
-                    else:
-                        continue
+                    # 全局优惠券
+                    coupon_info = {
+                        'coupon_type': user_coupon.coupon.coupon_type,
+                        'text': user_coupon.coupon.get_coupon_type_display(),
+                        'coupon_id': user_coupon.id,
+                        'begin_date': str(begin_date),
+                        'end_date': str(end_date),
+                        'money_equivalent_value': user_coupon.coupon.money_equivalent_value,
+                        'minimum_consume': user_coupon.coupon.minimum_consume,
+                        'off_percent': user_coupon.coupon.off_percent,
+                    }
                     global_coupon_dict[user_coupon.id] = coupon_info
+
+
             user_settlement = {
                 'course_dict_policy':course_dict_policy,
                 'global_coupon_dict':global_coupon_dict
@@ -423,11 +389,77 @@ class Settlement(views.APIView):
         except Exception as e:
             response['code'] = 1002
             response['msg'] = str(e)
+            print(str(e))
 
         return Response(response)
 
 
+class Payment(views.APIView):
+    """
+    立即支付
+    """
+    authentication_classes = [LuffyTokenAuthentication, ]
 
+    def post(self, request, *args, **kwargs):
+        response = {'code': 1000, 'msg': None}
+        try:
+            payment_data = request.data  # 点击立即支付时传来的数据
+            settlement_data = CONN.hget(settings.REDIS_SETTLEMENT_KEY,request.user.id)  # 获取结算时记录的数据
+            settlement_data = json.loads(settlement_data.decode('utf-8'))
+            car_data = CONN.hget(settings.REDIS_SHOPPING_CAR_KEY,request.user.id)  # 获取购物车的数据
+            car_data = json.loads(car_data.decode('utf-8'))
+
+            for course_id, course_info in payment_data['course_list'].items():
+                if course_id not in settlement_data['course_dict_policy']:
+                    raise Exception("课程不在结算列表中")
+
+                settlement_course_info = settlement_data['course_dict_policy'][course_id]
+                coupon_list = settlement_course_info['coupon_list']
+                coupon_exist = False
+                for coupon in coupon_list:
+                    if str(coupon['coupon_id']) == course_info['coupon_id']:
+                        coupon_exist = True
+                if not coupon_exist:
+                    raise Exception("绑定课程优惠券不存在")
+
+            if payment_data['global_coupon_id'] not in settlement_data['global_coupon_dict']:
+                raise Exception("全局优惠券不存在")
+
+            temp_data = {
+                'course_list': {},
+                'global_coupon': payment_data['global_coupon_id'],
+                'actual_amount': 0,
+            }
+            # 初步价格：课程优惠券
+            for course_id, course_info in payment_data['course_list'].items():
+                temp_data['course_list'][course_id] = course_info
+                temp_data['actual_amount'] += float(course_info['course_price'])
+
+            # 中间价格：全局优惠券
+            global_coupon_obj = models.Coupon.objects.get(pk=temp_data['global_coupon'])
+            if temp_data['actual_amount'] < global_coupon_obj.money_equivalent_value:
+                raise Exception("优惠券金额不能大于总金额")
+            if global_coupon_obj.coupon_type == 0:  # 通用券
+                temp_data['actual_amount'] -= global_coupon_obj.money_equivalent_value
+            elif global_coupon_obj['coupon_type'] == 1:  # 满减券
+                if temp_data['actual_amount'] <= global_coupon_obj.minimum_consume:
+                    raise Exception("总金额不足，不能使用该满减券")
+                temp_data['actual_amount'] -= global_coupon_obj.money_equivalent_value
+            elif global_coupon_obj['coupon_type'] == 2:  # 折扣券
+                temp_data['actual_amount'] = (temp_data['actual_amount'] * global_coupon_obj.money_equivalent_value)/100
+
+            # 根据中间价格和用户贝里进行计算，最终得到实际价格
+            pass
+
+
+
+        except Exception as e:
+            print(e)
+            response['code'] = 1003
+            response['msg'] = '支付失败'
+
+
+        return Response(response)
 
 
 
