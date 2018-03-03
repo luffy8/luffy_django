@@ -142,4 +142,9 @@ CACHES = {
     }
 }
 
+<<<<<<< HEAD
 REDIS_SHOPPING_CAR = 'redis_shopping_car'
+=======
+REDIS_SHOPPING_CAR_KEY = "cart11"
+REDIS_SETTLEMENT_KEY = "settlement11"
+>>>>>>> 6caf560dd105cd9fa9e3a6cb4e0c63f3a97bba1e
