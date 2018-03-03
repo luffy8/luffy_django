@@ -107,7 +107,7 @@ class Cart(views.APIView):
     def post(self, request, *args, **kwargs):
         """
         添加购物车
-        """
+        """ 
         response = {'code': 1000, 'msg': None}
         try:
             course_id = int(request.data.get('course_id'))
