@@ -13,22 +13,23 @@ class AliPay(object):
     支付宝支付接口(PC端支付接口)
     """
 
-    def __init__(self, debug=False):
-        self.appid = settings.APPID
-        self.app_notify_url = settings.NOTIFY_URL
-        self.app_private_key_path = settings.MERCHANT_PRIVATE_KEY_PATH
+    def __init__(self, appid, app_notify_url, app_private_key_path,
+                 alipay_public_key_path, return_url, debug=False):
+        self.appid = appid
+        self.app_notify_url = app_notify_url
+        self.app_private_key_path = app_private_key_path
         self.app_private_key = None
-        self.return_url = settings.RETURN_URL
+        self.return_url = return_url
         with open(self.app_private_key_path) as fp:
             self.app_private_key = RSA.importKey(fp.read())
-        self.alipay_public_key_path = settings.ALIPAY_PUBLIC_KEY_PATH
+        self.alipay_public_key_path = alipay_public_key_path
         with open(self.alipay_public_key_path) as fp:
             self.alipay_public_key = RSA.importKey(fp.read())
 
         if debug is True:
-            self.__gateway = settings.GATEWAY_URL_DEV
+            self.__gateway = "https://openapi.alipaydev.com/gateway.do"
         else:
-            self.__gateway = settings.GATEWAY_URL
+            self.__gateway = "https://openapi.alipay.com/gateway.do"
 
     def direct_pay(self, subject, out_trade_no, total_amount, return_url=None, **kwargs):
         biz_content = {
