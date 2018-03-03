@@ -1,11 +1,13 @@
 import json
 from datetime import datetime
-from Crypto.PublicKey import RSA
-from Crypto.Signature import PKCS1_v1_5
-from Crypto.Hash import SHA256
+from crypto.Crypto.PublicKey import RSA
+from crypto.Crypto.Signature import PKCS1_v1_5
+from crypto.Crypto.Hash import SHA256
 from urllib.parse import quote_plus
 from base64 import decodebytes, encodebytes
 from django.conf import settings
+
+
 
 
 class AliPay(object):
@@ -112,3 +114,31 @@ class AliPay(object):
         unsigned_items = self.ordered_data(data)
         message = "&".join(u"{}={}".format(k, v) for k, v in unsigned_items)
         return self._verify(message, signature)
+
+
+def get_alipay():
+    """ 用于初始化Alipay对象，包含用户的AppID，公钥，私钥等
+    Return:
+        返回初始化之后的Alipay对象
+    """
+
+    app_id = "2016091100483121"
+
+    # POST请求，用于最后的检测
+    notify_url = "http://172.96.203.6:8804/payment/validation/"
+
+    # GET请求，用于页面的跳转展示
+    return_url = "http://172.96.203.6:8804/payment/validation/"
+
+    merchant_private_key_path = "keys/app_private_2048.txt"     # 个人密钥
+    alipay_public_key_path = "keys/alipay_public_2048.txt"      # 支付宝公钥
+
+    alipay = AliPay(
+        appid=app_id,
+        app_notify_url=notify_url,
+        return_url=return_url,
+        app_private_key_path=merchant_private_key_path,
+        alipay_public_key_path=alipay_public_key_path,  # 支付宝的公钥，验证支付宝回传消息使用，不是你自己的公钥
+        debug=True,  # 默认False,
+    )
+    return alipay

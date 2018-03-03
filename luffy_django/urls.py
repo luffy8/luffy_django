@@ -30,5 +30,5 @@ urlpatterns = [
     url(r'^cart/$', views.Cart.as_view()),
     url(r'^settlement/$', views.Settlement.as_view()),
     url(r'^payment/$', views.Payment.as_view()),
-    url(r'^payment/validation/$', views.validation),
+    # url(r'^payment/validation/$', views.validation),
 ]
